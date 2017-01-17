@@ -1,0 +1,46 @@
+hql : coalesce(a,b) == NVL(a,b);
+
+jpa DB --> date
+@Temporal(TemporalType.DATE) 天数
+@Temporal(TemporalType.TIME) 时间
+@Temporal(TemporalType.TIMESTAMP) 天数+时间
+
+Specifications查询
+一、Spring Data JPA支持JPA2.0的Criteria查询，相应的接口是JpaSpecificationExecutor。
+二、Criteria查询
+		过滤条件
+	1：过滤条件会被应用到SQL语句的FROM子句中。在criteria 查询中，查询条件通过Predicate或Expression实例应用到CriteriaQuery对象上。
+	2：这些条件使用 CriteriaQuery .where 方法应用到CriteriaQuery 对象上
+	3：CriteriaBuilder也作为Predicate实例的工厂，通过调用CriteriaBuilder 的条件方法（ equal，notEqual， gt， ge，lt， le，between，like等）创建Predicate对象。
+	4：复合的Predicate 语句可以使用CriteriaBuilder的and, or andnot 方法构建。
+	 
+	构建简单的Predicate示例：
+	Predicate p1=cb.like(root.get(“name”).as(String.class), “%”+uqm.getName()+“%”);
+	Predicate p2=cb.equal(root.get("uuid").as(Integer.class), uqm.getUuid());
+	Predicate p3=cb.gt(root.get("age").as(Integer.class), uqm.getAge());
+	构建组合的Predicate示例：
+	Predicate p = cb.and(p3,cb.or(p1,p2)); 
+	
+	//根据条件查询得出分页结果
+	Page<DevStockPo> page2 = this.devStockDao2.findAll(new Specification<DevStockPo>(){
+
+					@Override
+					public Predicate toPredicate(Root<DevStockPo> root,
+							CriteriaQuery<?> query, CriteriaBuilder cb) {
+						//用来封装页面多个查询条件
+						List<Predicate> predicate = new ArrayList<Predicate>();
+						if (StringUtils.isNotBlank(devStock.getApplyOrderno())) {
+							predicate.add(cb.like(
+									root.get("applyOrderno").as(String.class),
+									"%"+devStock.getApplyOrderno()+"%"));
+						}
+						if (StringUtils.isNotBlank(devStock.getDeviceId())) {
+							predicate.add(cb.like(
+									root.get("deviceId").as(String.class),
+									"%"+devStock.getDeviceId()+"%"));
+						}
+						Predicate[] pre = new Predicate[predicate.size()];
+						
+					//	return query.where(predicate.toArray(pre)).getRestriction();
+					    return cb.and(predicate.toArray(pre));
+			}}, new MyPage(pageNumber,pageSize));

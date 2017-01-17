@@ -1,0 +1,68 @@
+使用EasyMock的总体步骤:
+
+	1、生成Mock接口
+	
+		方式一： ExampleDao mock = EasyMock.createMock(ExampleDao.class);
+		
+		方式二： IMocksControl control = EasyMock.createControl();
+				 ExampleDao1 mock1 = control.createMock(ExampleDao1.class);
+				 ExampleDao2 mock2 = control.createMock(ExampleDao2.class);
+				
+		方式三： 	@RunWith(EasyMockRunner.class)
+					public class ExampleTest {
+
+						@Mock
+						private ExampleDao mock;//1 注入dao层mock
+						
+						@TestSubject
+						private ExampleService exampleService = new ExampleServiceImpl();//2.测试目标类
+						
+					｝
+		
+	2、设置预期行为
+	
+		a.如果返回值是void：
+			mock.doVoidMethod();  
+			EasyMock.expectLastCall();// 最新版本的EasyMock可以忽略此句
+			
+		b.如果要求抛出异常：
+			EasyMock.expectLastCall().andThrow(new RuntimeException()).anyTimes(); 
+			
+		c.如果返回值不是void：
+			EasyMock.expect(mockService.doSomething(isA(Long.class), isA(Report.class),   
+        isNull(Report.class))).andReturn("return string").anyTimes();
+			上例方法中传入3个参数，分别是Long、Report、null——注意，如果参数是基本类型long，则使用EasyMock.anyLong()
+			
+	3、将Mock对象切换到replay状态
+		EasyMock.replay(mock);
+			如果是用MockControl来管理：
+			control.replay(); 
+	4、测试
+		exampleService.setDao(mock);  //注解不需要  自动注入
+		exampleService.doSomething();  
+		
+	5、验证Mock对象的行为
+		EasyMock.verify(mock);
+			如果是用MockControl来管理：
+			control.verify();
+			
+	注意：
+	expect()注意事项：
+	
+		a.期望传入参数为基本类型时
+			用expect来设置mock方法的期望调用方式时，如果使用到基本类型，但是又不要基本类型的值，
+				不能用：EasyMock.isA(Long.class)
+				要用：EasyMock.anyLong()
+		
+		b.期望传入参数可能为null时
+			要用：or(isA(String.class), isNull()) 
+			不能用：isA(String.class) 
+			
+		c.如果返回结果在运行时才能确定
+			很可能某个方法期望的返回结果不是固定的，例如根据传入参数不同而不同；这时需要使用andAnswer()：
+			EasyMock.expect(mockService.execute(EasyMock.anyInt())).andAnswer(new IAnswer<Integer>() {  
+            public Integer answer() throws Throwable {  
+                Integer count = (Integer) EasyMock.getCurrentArguments()[0];  
+                return count * 2;  
+            }  
+        });  
